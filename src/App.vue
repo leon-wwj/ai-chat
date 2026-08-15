@@ -1,5 +1,9 @@
 <template>
   <div class="app">
-    <h1>AI Chat</h1>111
+    <ChatView />
   </div>
 </template>
+
+<script setup>
+import ChatView from '@/views/ChatView.vue'
+</script>
