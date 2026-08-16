@@ -1,26 +1,44 @@
 <script setup>
-defineProps({
+import { ref, nextTick, watch } from 'vue'
+import ChatMessage from '@/components/ChatMessage.vue'
+
+const props = defineProps({
   messages: {
     type: Array,
     default: () => []
   }
 })
+
+const messagesContainer = ref(null)
+
+watch(
+  () => props.messages.length,
+  async () => {
+    await nextTick()
+
+    messagesContainer.value.scrollTop =
+      messagesContainer.value.scrollHeight
+  }
+)
 </script>
 
 <template>
-  <main class="chat-window">
-    <div v-if="messages.length === 0" class="empty">
+  <main
+    ref="messagesContainer"
+    class="chat-window"
+  >
+    <div
+      v-if="messages.length === 0"
+      class="empty"
+    >
       开始一段新的对话
     </div>
 
-    <div
+    <ChatMessage
       v-for="message in messages"
       :key="message.id"
-      class="message"
-      :class="message.role"
-    >
-      {{ message.content }}
-    </div>
+      :message="message"
+    />
   </main>
 </template>
 
@@ -34,21 +52,5 @@ defineProps({
 
 .empty {
   text-align: center;
-}
-
-.message {
-  width: fit-content;
-  max-width: 70%;
-  margin-bottom: 16px;
-  padding: 10px 14px;
-  border-radius: 10px;
-}
-
-.user {
-  margin-left: auto;
-}
-
-.assistant {
-  margin-right: auto;
 }
 </style>
