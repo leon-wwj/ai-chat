@@ -4,22 +4,40 @@ import { ref } from 'vue'
 import ChatSidebar from '@/components/ChatSidebar.vue'
 import ChatWindow from '@/components/ChatWindow.vue'
 import ChatInput from '@/components/ChatInput.vue'
+import { sendMessage } from '@/service/chat'
 
 const messages = ref([])
 
 let nextId = 1
-
-function handleSend(message) {
+const isLoading = ref(false)
+async function handleSend(message) {
   messages.value.push({
     id: nextId++,
     role: 'user',
     content: message
   })
-   messages.value.push({
-    id: nextId++,
-    role: 'assistant',
-    content: '这是 AI 的模拟回复。'
-  })
+
+  isLoading.value = true
+
+  try {
+    const response = await sendMessage(message)
+
+    messages.value.push({
+      id: nextId++,
+      role: response.data.role,
+      content: response.data.content
+    })
+  } catch (error) {
+    console.error('发送消息失败:', error)
+
+    messages.value.push({
+      id: nextId++,
+      role: 'assistant',
+      content: '请求失败，请检查后端服务是否启动。'
+    })
+  } finally {
+    isLoading.value = false
+  }
 }
 </script>
 
@@ -28,7 +46,10 @@ function handleSend(message) {
     <ChatSidebar />
 
     <div class="chat-main">
-      <ChatWindow :messages="messages" />
+      <ChatWindow
+        :messages="messages"
+        :is-loading="isLoading"
+      />
 
       <ChatInput @send="handleSend" />
     </div>

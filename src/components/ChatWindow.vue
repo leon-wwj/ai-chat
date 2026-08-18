@@ -6,6 +6,11 @@ const props = defineProps({
   messages: {
     type: Array,
     default: () => []
+  },
+
+  isLoading: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -39,6 +44,12 @@ watch(
       :key="message.id"
       :message="message"
     />
+    <div
+      v-if="isLoading"
+      class="loading"
+    > 
+      AI 正在思考...
+    </div>
   </main>
 </template>
 
@@ -52,5 +63,8 @@ watch(
 
 .empty {
   text-align: center;
+}
+.loading {
+  margin-bottom: 16px;
 }
 </style>
