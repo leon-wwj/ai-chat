@@ -12,15 +12,21 @@ function handleSend() {
 
   message.value = ''
 }
+
+function handleKeydown(event) {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault()
+    handleSend()
+  }
+}
 </script>
 
 <template>
   <div class="chat-input">
-    <input
+    <textarea
       v-model="message"
-      type="text"
       placeholder="输入消息..."
-      @keyup.enter="handleSend"
+      @keydown="handleKeydown"
     />
 
     <button @click="handleSend">
@@ -37,11 +43,13 @@ function handleSend() {
   border-top: 1px solid #eee;
 }
 
-.chat-input input {
+.chat-input textarea {
   flex: 1;
   padding: 12px;
   border: 1px solid #ddd;
   border-radius: 8px;
+  resize: none;
+  font-family: inherit;
 }
 
 .chat-input button {
