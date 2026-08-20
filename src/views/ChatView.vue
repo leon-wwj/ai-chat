@@ -28,8 +28,6 @@ async function handleSend(message) {
       content: response.data.content
     })
   } catch (error) {
-    console.error('发送消息失败:', error)
-
     messages.value.push({
       id: nextId++,
       role: 'assistant',

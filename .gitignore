@@ -28,3 +28,8 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
