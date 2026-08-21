@@ -1,16 +1,49 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 
 import ChatSidebar from '@/components/ChatSidebar.vue'
 import ChatWindow from '@/components/ChatWindow.vue'
 import ChatInput from '@/components/ChatInput.vue'
+import ChatSettings from '@/components/ChatSettings.vue'
 import { sendMessage } from '@/service/chat'
 
+const DEFAULT_SETTINGS = {
+  apiKey: '',
+  baseURL: 'https://api.deepseek.com',
+  model: 'deepseek-v4-flash'
+}
+
+function loadSettings() {
+  try {
+    return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('ai-chat-settings')) }
+  } catch {
+    return { ...DEFAULT_SETTINGS }
+  }
+}
+
 const messages = ref([])
+const settings = reactive(loadSettings())
+const showSettings = ref(false)
 
 let nextId = 1
 const isLoading = ref(false)
+
+function handleSaveSettings(newSettings) {
+  Object.assign(settings, newSettings)
+  localStorage.setItem('ai-chat-settings', JSON.stringify(settings))
+  showSettings.value = false
+}
+
 async function handleSend(message) {
+  if (!settings.apiKey) {
+    messages.value.push({
+      id: nextId++,
+      role: 'assistant',
+      content: '请先点击"API 设置"填入你的 API Key。'
+    })
+    return
+  }
+
   messages.value.push({
     id: nextId++,
     role: 'user',
@@ -20,7 +53,8 @@ async function handleSend(message) {
   isLoading.value = true
 
   try {
-    const response = await sendMessage(message)
+    const history = messages.value.map((m) => ({ role: m.role, content: m.content }))
+    const response = await sendMessage(history, settings)
 
     messages.value.push({
       id: nextId++,
@@ -28,10 +62,11 @@ async function handleSend(message) {
       content: response.data.content
     })
   } catch (error) {
+    const detail = error.response?.data?.error || error.message || '未知错误'
     messages.value.push({
       id: nextId++,
       role: 'assistant',
-      content: '请求失败，请检查后端服务是否启动。'
+      content: `请求失败：${detail}`
     })
   } finally {
     isLoading.value = false
@@ -44,6 +79,15 @@ async function handleSend(message) {
     <ChatSidebar />
 
     <div class="chat-main">
+      <div class="chat-header">
+        <button
+          class="settings-btn"
+          @click="showSettings = true"
+        >
+          API 设置
+        </button>
+      </div>
+
       <ChatWindow
         :messages="messages"
         :is-loading="isLoading"
@@ -51,8 +95,16 @@ async function handleSend(message) {
 
       <ChatInput @send="handleSend" />
     </div>
+
+    <ChatSettings
+      v-if="showSettings"
+      :settings="settings"
+      @save="handleSaveSettings"
+      @close="showSettings = false"
+    />
   </div>
 </template>
+
 <style scoped>
 .chat-view {
   display: flex;
@@ -64,5 +116,20 @@ async function handleSend(message) {
   display: flex;
   flex-direction: column;
   min-width: 0;
+}
+
+.chat-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.settings-btn {
+  padding: 6px 14px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
 }
 </style>

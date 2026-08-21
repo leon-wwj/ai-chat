@@ -240,6 +240,22 @@ easy-to-forget details
 
 Do not interrupt normal development with unnecessary theoretical explanations.
 
+### Code change treatment and learning adaptation
+
+When changing or optimizing code, adapt to the learner's current level:
+
+- If the change does not belong to the current / near-term learning scope:
+  change it directly, without detailed explanation.
+- If the change involves concepts the learner is currently studying, or should understand soon:
+  mark it and explain it (what changed, why, and what concept is involved).
+
+Keep changes and optimizations progressive, matching the learner's current skill level
+(Vue 3 + JavaScript at this stage). Avoid rewriting simple, understandable code into
+more "advanced" forms just for the sake of elegance or style.
+
+For any change to existing code, always present the key before / after comparison:
+only the key fragments, plus a short note about the essential difference.
+
 13. Current Learning Priority
 
 The current priority is:
