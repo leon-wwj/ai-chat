@@ -1,6 +1,8 @@
+import json
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 import httpx
 
@@ -28,14 +30,11 @@ class ChatRequest(BaseModel):
     api_key: str
     base_url: str = DEFAULT_BASE_URL
     model: str = DEFAULT_MODEL
+    stream: bool = False
 
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
-    """转发到 OpenAI 兼容的 LLM 接口（DeepSeek / OpenAI / Kimi 等）。
-
-    API Key 由前端（用户浏览器）传入，后端仅中转，不落盘。
-    """
     url = f"{req.base_url.rstrip('/')}/chat/completions"
 
     headers = {
@@ -45,8 +44,16 @@ async def chat(req: ChatRequest):
     payload = {
         "model": req.model,
         "messages": [m.model_dump() for m in req.messages],
-        "stream": False,
     }
+
+    if req.stream:
+        payload["stream"] = True
+        return StreamingResponse(
+            stream_llm(url, headers, payload),
+            media_type="text/plain",
+        )
+
+    payload["stream"] = False
 
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
@@ -76,3 +83,29 @@ async def chat(req: ChatRequest):
         "role": "assistant",
         "content": content,
     }
+
+
+async def stream_llm(url: str, headers: dict, payload: dict):
+    try:
+        async with httpx.AsyncClient(timeout=None) as client:
+            async with client.stream("POST", url, json=payload, headers=headers) as resp:
+                if resp.status_code != 200:
+                    body = (await resp.aread()).decode("utf-8", errors="replace")
+                    yield f"__ERROR__:LLM 接口返回 {resp.status_code}: {body[:500]}"
+                    return
+
+                async for line in resp.aiter_lines():
+                    if not line.startswith("data:"):
+                        continue
+                    data = line[5:].strip()
+                    if data == "[DONE]":
+                        break
+                    try:
+                        obj = json.loads(data)
+                        content = obj["choices"][0]["delta"].get("content")
+                        if content:
+                            yield content
+                    except (json.JSONDecodeError, KeyError, IndexError):
+                        continue
+    except httpx.HTTPError as exc:
+        yield f"__ERROR__:连接 LLM 服务失败: {exc}"

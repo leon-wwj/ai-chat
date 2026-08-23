@@ -256,6 +256,13 @@ more "advanced" forms just for the sake of elegance or style.
 For any change to existing code, always present the key before / after comparison:
 only the key fragments, plus a short note about the essential difference.
 
+### Service lifecycle
+
+After finishing a task (code change or validation), stop any frontend/backend
+dev servers that the agent itself started, and leave them for the learner to
+start on their own. Do not leave agent-managed dev servers running after a task
+is done.
+
 13. Current Learning Priority
 
 The current priority is:

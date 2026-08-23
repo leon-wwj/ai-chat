@@ -13,6 +13,8 @@ const DEFAULT_SETTINGS = {
   model: 'deepseek-v4-flash'
 }
 
+const SYSTEM_PROMPT = '你是一个专业、准确、简洁的 AI 助手。'
+
 function loadSettings() {
   try {
     return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('ai-chat-settings')) }
@@ -53,7 +55,10 @@ async function handleSend(message) {
   isLoading.value = true
 
   try {
-    const history = messages.value.map((m) => ({ role: m.role, content: m.content }))
+    const history = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...messages.value.map((m) => ({ role: m.role, content: m.content }))
+    ]
     const response = await sendMessage(history, settings)
 
     messages.value.push({
