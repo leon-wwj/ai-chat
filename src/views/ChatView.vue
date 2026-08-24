@@ -5,7 +5,7 @@ import ChatSidebar from '@/components/ChatSidebar.vue'
 import ChatWindow from '@/components/ChatWindow.vue'
 import ChatInput from '@/components/ChatInput.vue'
 import ChatSettings from '@/components/ChatSettings.vue'
-import { sendMessage } from '@/service/chat'
+import { streamChat } from '@/service/chat'
 
 const DEFAULT_SETTINGS = {
   apiKey: '',
@@ -41,7 +41,8 @@ async function handleSend(message) {
     messages.value.push({
       id: nextId++,
       role: 'assistant',
-      content: '请先点击"API 设置"填入你的 API Key。'
+      content: '请先点击"API 设置"填入你的 API Key。',
+      system: true
     })
     return
   }
@@ -52,27 +53,45 @@ async function handleSend(message) {
     content: message
   })
 
+  const assistantId = nextId++
+  messages.value.push({
+    id: assistantId,
+    role: 'assistant',
+    content: ''
+  })
+
   isLoading.value = true
 
   try {
     const history = [
       { role: 'system', content: SYSTEM_PROMPT },
-      ...messages.value.map((m) => ({ role: m.role, content: m.content }))
+      ...messages.value
+        .filter((m) => m.id !== assistantId && !m.system)
+        .map((m) => ({ role: m.role, content: m.content }))
     ]
-    const response = await sendMessage(history, settings)
 
-    messages.value.push({
-      id: nextId++,
-      role: response.data.role,
-      content: response.data.content
+    await streamChat(history, settings, {
+      onDelta: (delta) => {
+        const target = messages.value.find((m) => m.id === assistantId)
+        if (target) target.content += delta
+      },
+      onError: (err) => {
+        const target = messages.value.find((m) => m.id === assistantId)
+        if (target) {
+          target.content = err
+          target.error = true
+          target.system = true
+        }
+      }
     })
   } catch (error) {
+    const target = messages.value.find((m) => m.id === assistantId)
     const detail = error.response?.data?.error || error.message || '未知错误'
-    messages.value.push({
-      id: nextId++,
-      role: 'assistant',
-      content: `请求失败：${detail}`
-    })
+    if (target) {
+      target.content = `请求失败：${detail}`
+      target.error = true
+      target.system = true
+    }
   } finally {
     isLoading.value = false
   }

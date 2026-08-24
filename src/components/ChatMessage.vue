@@ -10,7 +10,7 @@ defineProps({
 <template>
   <div
     class="message"
-    :class="message.role"
+    :class="[message.role, { error: message.error }]"
   >
     {{ message.content }}
   </div>
@@ -27,9 +27,17 @@ defineProps({
 
 .user {
   margin-left: auto;
+  background: #e3f2fd;
 }
 
 .assistant {
   margin-right: auto;
+  background: #f5f5f5;
+}
+
+.message.error {
+  background: #fff1f0;
+  border: 1px solid #ffa39e;
+  color: #cf1322;
 }
 </style>
