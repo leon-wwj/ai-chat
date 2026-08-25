@@ -1,10 +1,13 @@
-<script setup>
-defineProps({
-  message: {
-    type: Object,
-    required: true
-  }
-})
+<script setup lang="ts">
+interface Message {
+  id: number
+  role: 'user' | 'assistant'
+  content: string
+  error?: boolean
+  system?: boolean
+}
+
+defineProps<{ message: Message }>()
 </script>
 
 <template>
