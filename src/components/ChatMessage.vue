@@ -1,11 +1,5 @@
 <script setup lang="ts">
-interface Message {
-  id: number
-  role: 'user' | 'assistant'
-  content: string
-  error?: boolean
-  system?: boolean
-}
+import type { Message } from '@/types'
 
 defineProps<{ message: Message }>()
 </script>

@@ -1,9 +1,8 @@
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 
 const message = ref('')
-
-const emit = defineEmits(['send'])
+const emit = defineEmits<{ send: [message: string] }>()
 
 function handleSend() {
   if (!message.value.trim()) return
@@ -13,7 +12,7 @@ function handleSend() {
   message.value = ''
 }
 
-function handleKeydown(event) {
+function handleKeydown(event: KeyboardEvent) {
   if (event.key === 'Enter' && !event.shiftKey) {
     event.preventDefault()
     handleSend()

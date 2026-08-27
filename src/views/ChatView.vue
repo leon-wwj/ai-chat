@@ -1,5 +1,6 @@
-<script setup>
+<script setup lang="ts">
 import { ref, reactive } from 'vue'
+import type { Message, Settings, ChatMessage } from '@/types'
 
 import ChatSidebar from '@/components/ChatSidebar.vue'
 import ChatWindow from '@/components/ChatWindow.vue'
@@ -7,7 +8,7 @@ import ChatInput from '@/components/ChatInput.vue'
 import ChatSettings from '@/components/ChatSettings.vue'
 import { streamChat } from '@/service/chat'
 
-const DEFAULT_SETTINGS = {
+const DEFAULT_SETTINGS: Settings = {
   apiKey: '',
   baseURL: 'https://api.deepseek.com',
   model: 'deepseek-v4-flash'
@@ -15,28 +16,33 @@ const DEFAULT_SETTINGS = {
 
 const SYSTEM_PROMPT = '你是一个专业、准确、简洁的 AI 助手。'
 
-function loadSettings() {
+function loadSettings(): Settings {
   try {
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('ai-chat-settings')) }
+    const raw = localStorage.getItem('ai-chat-settings')
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<Settings>
+      return { ...DEFAULT_SETTINGS, ...parsed }
+    }
+    return { ...DEFAULT_SETTINGS }
   } catch {
     return { ...DEFAULT_SETTINGS }
   }
 }
 
-const messages = ref([])
-const settings = reactive(loadSettings())
+const messages = ref<Message[]>([])
+const settings = reactive<Settings>(loadSettings())
 const showSettings = ref(false)
 
 let nextId = 1
 const isLoading = ref(false)
 
-function handleSaveSettings(newSettings) {
+function handleSaveSettings(newSettings: Settings) {
   Object.assign(settings, newSettings)
   localStorage.setItem('ai-chat-settings', JSON.stringify(settings))
   showSettings.value = false
 }
 
-async function handleSend(message) {
+async function handleSend(message: string) {
   if (!settings.apiKey) {
     messages.value.push({
       id: nextId++,
@@ -63,7 +69,7 @@ async function handleSend(message) {
   isLoading.value = true
 
   try {
-    const history = [
+    const history: ChatMessage[] = [
       { role: 'system', content: SYSTEM_PROMPT },
       ...messages.value
         .filter((m) => m.id !== assistantId && !m.system)
@@ -71,11 +77,11 @@ async function handleSend(message) {
     ]
 
     await streamChat(history, settings, {
-      onDelta: (delta) => {
+      onDelta: (delta: string) => {
         const target = messages.value.find((m) => m.id === assistantId)
         if (target) target.content += delta
       },
-      onError: (err) => {
+      onError: (err: string) => {
         const target = messages.value.find((m) => m.id === assistantId)
         if (target) {
           target.content = err

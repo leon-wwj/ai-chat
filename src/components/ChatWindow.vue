@@ -1,28 +1,24 @@
-<script setup>
+<script setup lang="ts">
 import { ref, nextTick, watch } from 'vue'
+import type { Message } from '@/types'
 import ChatMessage from '@/components/ChatMessage.vue'
 
-const props = defineProps({
-  messages: {
-    type: Array,
-    default: () => []
-  },
+const props = defineProps<{
+  messages: Message[]
+  isLoading?: boolean
+}>()
 
-  isLoading: {
-    type: Boolean,
-    default: false
-  }
-})
-
-const messagesContainer = ref(null)
+const messagesContainer = ref<HTMLElement | null>(null)
 
 watch(
   () => props.messages.length,
   async () => {
     await nextTick()
 
-    messagesContainer.value.scrollTop =
-      messagesContainer.value.scrollHeight
+    if (messagesContainer.value) {
+      messagesContainer.value.scrollTop =
+        messagesContainer.value.scrollHeight
+    }
   }
 )
 </script>

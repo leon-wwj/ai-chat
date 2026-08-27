@@ -1,14 +1,12 @@
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
+import type { ChatSettings } from '@/types'
 
-const props = defineProps({
-  settings: {
-    type: Object,
-    required: true
-  }
-})
-
-const emit = defineEmits(['save', 'close'])
+const props = defineProps<{ settings: ChatSettings }>()
+const emit = defineEmits<{
+  save: [settings: ChatSettings]
+  close: []
+}>()
 
 const apiKey = ref(props.settings.apiKey)
 const baseURL = ref(props.settings.baseURL)

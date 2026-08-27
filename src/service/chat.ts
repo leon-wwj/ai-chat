@@ -1,8 +1,15 @@
 import request from '@/utils/request'
+import type { ChatMessage, ChatSettings } from '@/types'
 
 const API_BASE = request.defaults.baseURL || 'http://localhost:8000'
 
-export function sendMessage(messages, settings) {
+interface StreamHandlers {
+  onDelta?: (delta: string) => void
+  onError?: (err: string) => void
+  onDone?: () => void
+}
+
+export function sendMessage(messages: ChatMessage[], settings: ChatSettings) {
   return request.post('/chat', {
     messages,
     api_key: settings.apiKey,
@@ -12,8 +19,12 @@ export function sendMessage(messages, settings) {
   })
 }
 
-export async function streamChat(messages, settings, handlers) {
-  const { onDelta, onError, onDone } = handlers || {}
+export async function streamChat(
+  messages: ChatMessage[],
+  settings: ChatSettings,
+  handlers: StreamHandlers = {}
+): Promise<void> {
+  const { onDelta, onError, onDone } = handlers
 
   const resp = await fetch(`${API_BASE}/chat`, {
     method: 'POST',
@@ -29,6 +40,9 @@ export async function streamChat(messages, settings, handlers) {
 
   if (!resp.ok) {
     throw new Error(`HTTP ${resp.status}`)
+  }
+  if (!resp.body) {
+    throw new Error('响应没有内容')
   }
 
   const reader = resp.body.getReader()
