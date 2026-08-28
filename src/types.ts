@@ -14,3 +14,8 @@ export interface Message extends ChatMessage {
   error?: boolean
   system?: boolean
 }
+
+export interface ChatResponse {
+  role: 'system' | 'user' | 'assistant'
+  content: string
+}

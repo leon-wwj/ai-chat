@@ -1,5 +1,5 @@
 import request from '@/utils/request'
-import type { ChatMessage, ChatSettings } from '@/types'
+import type { ChatMessage, ChatSettings, ChatResponse } from '@/types'
 
 const API_BASE = request.defaults.baseURL || 'http://localhost:8000'
 
@@ -10,7 +10,7 @@ interface StreamHandlers {
 }
 
 export function sendMessage(messages: ChatMessage[], settings: ChatSettings) {
-  return request.post('/chat', {
+  return request.post<ChatResponse>('/chat', {
     messages,
     api_key: settings.apiKey,
     base_url: settings.baseURL,

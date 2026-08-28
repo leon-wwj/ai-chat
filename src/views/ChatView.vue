@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import type { Message, Settings, ChatMessage } from '@/types'
+import type { Message, ChatSettings as Settings, ChatMessage } from '@/types'
 
 import ChatSidebar from '@/components/ChatSidebar.vue'
 import ChatWindow from '@/components/ChatWindow.vue'
@@ -92,7 +92,7 @@ async function handleSend(message: string) {
     })
   } catch (error) {
     const target = messages.value.find((m) => m.id === assistantId)
-    const detail = error.response?.data?.error || error.message || '未知错误'
+    const detail = error instanceof Error ? error.message : '未知错误'
     if (target) {
       target.content = `请求失败：${detail}`
       target.error = true
