@@ -54,11 +54,11 @@ export async function streamChat(
 
     const chunk = decoder.decode(value, { stream: true })
     if (chunk.startsWith('__ERROR__:')) {
-      onError && onError(chunk.slice('__ERROR__:'.length))
+      onError?.(chunk.slice('__ERROR__:'.length))
       break
     }
-    if (chunk) onDelta && onDelta(chunk)
+    if (chunk) onDelta?.(chunk)
   }
 
-  onDone && onDone()
+  onDone?.()
 }
