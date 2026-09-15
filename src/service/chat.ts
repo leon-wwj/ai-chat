@@ -4,6 +4,7 @@ import type { ChatMessage, ChatSettings, ChatResponse } from '@/types'
 const API_BASE = request.defaults.baseURL || 'http://localhost:8000'
 
 interface StreamHandlers {
+  onModel?: (model: string) => void
   onDelta?: (delta: string) => void
   onError?: (err: string) => void
   onDone?: () => void
@@ -19,12 +20,20 @@ export function sendMessage(messages: ChatMessage[], settings: ChatSettings) {
   })
 }
 
+export async function fetchModels(settings: ChatSettings): Promise<string[]> {
+  const resp = await request.post<{ models: string[] }>('/models', {
+    api_key: settings.apiKey,
+    base_url: settings.baseURL,
+  })
+  return resp.data.models
+}
+
 export async function streamChat(
   messages: ChatMessage[],
   settings: ChatSettings,
   handlers: StreamHandlers = {}
 ): Promise<void> {
-  const { onDelta, onError, onDone } = handlers
+  const { onModel, onDelta, onError, onDone } = handlers
 
   const resp = await fetch(`${API_BASE}/chat`, {
     method: 'POST',
@@ -49,12 +58,29 @@ export async function streamChat(
   const decoder = new TextDecoder()
 
   let hasError = false
+  let headerDone = false
+  let pending = ''
 
   while (true) {
     const { done, value } = await reader.read()
     if (done) break
 
-    const chunk = decoder.decode(value, { stream: true })
+    let chunk = decoder.decode(value, { stream: true })
+
+    if (!headerDone) {
+      pending += chunk
+      if (pending.startsWith('__MODEL__:')) {
+        const nl = pending.indexOf('\n')
+        if (nl === -1) continue
+        onModel?.(pending.slice('__MODEL__:'.length, nl).trim())
+        chunk = pending.slice(nl + 1)
+      } else {
+        chunk = pending
+      }
+      pending = ''
+      headerDone = true
+    }
+
     if (chunk.startsWith('__ERROR__:')) {
       hasError = true
       onError?.(chunk.slice('__ERROR__:'.length))

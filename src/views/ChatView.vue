@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import type { Message, ChatSettings as Settings, ChatMessage } from '@/types'
 
 import ChatSidebar from '@/components/ChatSidebar.vue'
 import ChatWindow from '@/components/ChatWindow.vue'
 import ChatInput from '@/components/ChatInput.vue'
 import ChatSettings from '@/components/ChatSettings.vue'
-import { streamChat } from '@/service/chat'
+import { fetchModels, streamChat } from '@/service/chat'
 
 const DEFAULT_SETTINGS: Settings = {
   apiKey: '',
@@ -36,13 +36,45 @@ const showSettings = ref(false)
 let nextId = 1
 const isLoading = ref(false)
 
+function loadModels(): string[] {
+  try {
+    const raw = localStorage.getItem('ai-chat-models')
+    return raw ? (JSON.parse(raw) as string[]) : []
+  } catch {
+    return []
+  }
+}
+
+const MODEL_PRESETS = ['deepseek-v4-flash', 'deepseek-v4-pro']
+const models = ref<string[]>(loadModels())
+
+const modelOptions = computed(() =>
+  models.value.length ? models.value : MODEL_PRESETS
+)
+
+async function refreshModels() {
+  if (!settings.apiKey) return
+  try {
+    const list = await fetchModels(settings)
+    if (list.length) {
+      models.value = list
+      localStorage.setItem('ai-chat-models', JSON.stringify(list))
+    }
+  } catch {
+    // 拉取失败时保留现有列表（回退到预设）
+  }
+}
+
+onMounted(() => {
+  if (settings.apiKey && !models.value.length) refreshModels()
+})
+
 function handleSaveSettings(newSettings: Settings) {
   Object.assign(settings, newSettings)
   localStorage.setItem('ai-chat-settings', JSON.stringify(settings))
   showSettings.value = false
+  refreshModels()
 }
-
-const MODEL_PRESETS = ['deepseek-v4-flash', 'deepseek-v4-pro']
 
 function handleModelChange() {
   localStorage.setItem('ai-chat-settings', JSON.stringify(settings))
@@ -84,6 +116,10 @@ async function handleSend(message: string) {
     ]
 
     await streamChat(history, settings, {
+      onModel: (model: string) => {
+        const target = messages.value.find((m) => m.id === assistantId)
+        if (target) target.model = model
+      },
       onDelta: (delta: string) => {
         const target = messages.value.find((m) => m.id === assistantId)
         if (target) target.content += delta
@@ -123,14 +159,14 @@ async function handleSend(message: string) {
           @change="handleModelChange"
         >
           <option
-            v-for="m in MODEL_PRESETS"
+            v-for="m in modelOptions"
             :key="m"
             :value="m"
           >
             {{ m }}
           </option>
           <option
-            v-if="!MODEL_PRESETS.includes(settings.model)"
+            v-if="!modelOptions.includes(settings.model)"
             :value="settings.model"
           >
             {{ settings.model }}

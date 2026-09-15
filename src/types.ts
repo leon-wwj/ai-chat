@@ -19,4 +19,5 @@ export interface Message extends ChatMessage {
 export interface ChatResponse {
   role: 'system' | 'user' | 'assistant'
   content: string
+  model?: string
 }
