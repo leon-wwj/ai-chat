@@ -13,6 +13,7 @@ export interface Message extends ChatMessage {
   id: number
   error?: boolean
   system?: boolean
+  model?: string
 }
 
 export interface ChatResponse {

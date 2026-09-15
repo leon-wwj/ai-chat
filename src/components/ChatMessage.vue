@@ -10,6 +10,12 @@ defineProps<{ message: Message }>()
     :class="[message.role, { error: message.error }]"
   >
     {{ message.content }}
+    <span
+      v-if="message.model && !message.error"
+      class="model-tag"
+    >
+      {{ message.model }}
+    </span>
   </div>
 </template>
 
@@ -36,5 +42,13 @@ defineProps<{ message: Message }>()
   background: #fff1f0;
   border: 1px solid #ffa39e;
   color: #cf1322;
+}
+
+.model-tag {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #999;
+  text-align: right;
 }
 </style>

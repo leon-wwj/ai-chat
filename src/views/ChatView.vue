@@ -42,6 +42,12 @@ function handleSaveSettings(newSettings: Settings) {
   showSettings.value = false
 }
 
+const MODEL_PRESETS = ['deepseek-v4-flash', 'deepseek-v4-pro']
+
+function handleModelChange() {
+  localStorage.setItem('ai-chat-settings', JSON.stringify(settings))
+}
+
 async function handleSend(message: string) {
   if (!settings.apiKey) {
     messages.value.push({
@@ -63,7 +69,8 @@ async function handleSend(message: string) {
   messages.value.push({
     id: assistantId,
     role: 'assistant',
-    content: ''
+    content: '',
+    model: settings.model
   })
 
   isLoading.value = true
@@ -110,6 +117,26 @@ async function handleSend(message: string) {
 
     <div class="chat-main">
       <div class="chat-header">
+        <select
+          v-model="settings.model"
+          class="model-select"
+          @change="handleModelChange"
+        >
+          <option
+            v-for="m in MODEL_PRESETS"
+            :key="m"
+            :value="m"
+          >
+            {{ m }}
+          </option>
+          <option
+            v-if="!MODEL_PRESETS.includes(settings.model)"
+            :value="settings.model"
+          >
+            {{ settings.model }}
+          </option>
+        </select>
+
         <button
           class="settings-btn"
           @click="showSettings = true"
@@ -150,9 +177,19 @@ async function handleSend(message: string) {
 
 .chat-header {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
   padding: 12px 16px;
   border-bottom: 1px solid #eee;
+}
+
+.model-select {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
 }
 
 .settings-btn {
