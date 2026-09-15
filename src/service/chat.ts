@@ -48,17 +48,20 @@ export async function streamChat(
   const reader = resp.body.getReader()
   const decoder = new TextDecoder()
 
+  let hasError = false
+
   while (true) {
     const { done, value } = await reader.read()
     if (done) break
 
     const chunk = decoder.decode(value, { stream: true })
     if (chunk.startsWith('__ERROR__:')) {
+      hasError = true
       onError?.(chunk.slice('__ERROR__:'.length))
       break
     }
     if (chunk) onDelta?.(chunk)
   }
 
-  onDone?.()
+  if (!hasError) onDone?.()
 }
