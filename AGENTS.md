@@ -1,52 +1,67 @@
 Project Agent Instructions
 1. Project Overview
 
-This project is a Vue 3 AI Chat application.
+This project is a Vue 3 (TypeScript) AI Chat application with a Python / FastAPI backend.
 
-The current primary goal is to build a real, maintainable frontend project while using the project itself to deepen understanding of:
+The frontend stage is essentially complete: the Vue 3 + TypeScript chat UI, the Axios request
+layer, the FastAPI backend skeleton, and LLM API integration with streaming responses all work.
 
-JavaScript
-Vue 3
-HTTP / REST API
-Axios
-Frontend engineering
-Project structure
-AI application development
-
-The project is also intended to become the frontend foundation for later expansion into:
+The current primary goal is the backend and AI application layer, using the project itself to
+deepen understanding of:
 
 Python
 FastAPI
-MySQL / Redis
-Linux / Docker
-LLM APIs
-Streaming responses
-RAG
-Embeddings
-Vector databases
-Agents
+LLM APIs (OpenAI-compatible)
+Streaming responses (SSE)
+HTTP / REST API design
+Backend engineering (layering, configuration, error handling)
+AI application development
 
-Do not prematurely introduce these future technologies into the current project unless explicitly requested.
+The project is intended to continue expanding into:
+
+RAG / Embeddings / retrieval
+Vector databases
+Agents / Tool Calling
+MySQL / Redis
+Linux / Docker deployment
+
+Do not prematurely introduce these not-yet-started technologies into the current project unless
+explicitly requested.
 
 2. Current Technology Constraints
 
 Current stack:
 
+Frontend
 Vue 3
 Vite
-JavaScript
+TypeScript
 Axios
 npm
 
+Backend
+Python 3.12
+FastAPI
+httpx (calls the LLM API)
+Pydantic v2 (request models / validation)
+uvicorn (dev server)
+
 Important:
 
-Use JavaScript, not TypeScript, unless explicitly requested.
+TypeScript is the project standard - do not revert frontend files to plain JavaScript.
 Use Vue 3 Composition API.
 Prefer <script setup>.
-Do not migrate the project to TypeScript.
 Do not replace Vue 3 or Vite with another frontend framework or build tool.
+Do not replace FastAPI with another backend framework, and do not rewrite the backend in another language.
 
-When uncertain about the exact installed version or available scripts, inspect package.json instead of guessing.
+When uncertain about the exact installed version or available scripts, inspect package.json and
+the backend's dependencies instead of guessing.
+
+Backend environment:
+
+Backend dependencies are installed in backend/.venv, created with the system Python 3.12.
+Run the backend with backend/.venv/Scripts/python.exe instead of the global interpreter.
+When adding or upgrading a backend dependency, update backend/requirements.txt in the same change.
 
 3. Development Principles
 3.1 Prefer understanding over blind automation
@@ -250,7 +265,7 @@ When changing or optimizing code, adapt to the learner's current level:
   mark it and explain it (what changed, why, and what concept is involved).
 
 Keep changes and optimizations progressive, matching the learner's current skill level
-(Vue 3 + JavaScript at this stage). Avoid rewriting simple, understandable code into
+(Vue 3 + TypeScript frontend, Python / FastAPI backend at this stage). Avoid rewriting simple, understandable code into
 more "advanced" forms just for the sake of elegance or style.
 
 For any change to existing code, always present the key before / after comparison:
@@ -267,12 +282,17 @@ is done.
 
 The current priority is:
 
-Vue 3
-JavaScript
-TypeScript knowledge later, when appropriate
-Engineering fundamentals
-HTTP / API / frontend architecture
-AI application development
+Python
+FastAPI
+LLM API integration
+Streaming responses (SSE)
+RAG (Embeddings / retrieval) - the next stage
+Backend engineering fundamentals (layering, configuration, error handling, environment isolation)
+HTTP / API design
+
+Frontend is now a supporting skill, not a learning focus: the Vue 3 + TypeScript frontend should
+stay readable, modifiable, and maintainable, and should be extended only as far as the AI
+application requires. Do not push frontend depth further at this stage.
 
 Do not prematurely shift the main project toward:
 
@@ -282,25 +302,26 @@ advanced backend architecture
 large-scale distributed systems
 unnecessary infrastructure
 
-Future technologies may be introduced when the current stage is sufficiently complete.
+Do not add MySQL / Redis / Docker / vector databases before a concrete need appears in the
+RAG stage.
 
-14. Future Architecture Direction
+14. Architecture Direction and Current Stage
 
-The project may later evolve toward:
+Architecture, with the actual status of each stage:
 
-Vue 3 frontend
+Vue 3 + TypeScript frontend          [done]
         ↓
-FastAPI backend
+FastAPI backend (/chat, /models)     [done]
         ↓
-LLM API
+LLM API (OpenAI-compatible)          [done]
         ↓
-Streaming responses
+Streaming responses (SSE)            [done]
         ↓
-RAG / Embeddings
+RAG / Embeddings / retrieval         [next]
         ↓
-Vector database
+Vector database                      [planned]
         ↓
-Agents
+Agents / Tool Calling                [planned]
 
 
 Later infrastructure may include:
@@ -311,9 +332,8 @@ Linux
 Docker
 
 
-These are future directions, not current requirements.
-
-Do not build the future architecture before there is a concrete need.
+Stages marked [next] and [planned] are not implemented yet. Introduce each one when the current
+stage has a concrete need - do not build a later stage before the previous one works.
 
 15. Agent Working Style
 
