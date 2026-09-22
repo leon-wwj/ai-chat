@@ -16,7 +16,7 @@ app.add_middleware(
 )
 
 DEFAULT_BASE_URL = "https://api.deepseek.com"
-DEFAULT_MODEL = "deepseek-v4-flash"
+DEFAULT_MODEL = "deepseek-flash"
 TIMEOUT_SECONDS = 60
 
 

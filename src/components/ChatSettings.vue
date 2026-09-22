@@ -50,7 +50,7 @@ function handleSave() {
         模型名
         <input
           v-model="model"
-          placeholder="deepseek-v4-flash"
+          placeholder="deepseek-flash"
         />
       </label>
 
