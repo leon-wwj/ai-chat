@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import type { Message, ChatSettings as Settings, ChatMessage } from '@/types'
 
 import ChatSidebar from '@/components/ChatSidebar.vue'
@@ -11,7 +11,7 @@ import { fetchModels, streamChat } from '@/service/chat'
 const DEFAULT_SETTINGS: Settings = {
   apiKey: '',
   baseURL: 'https://api.deepseek.com',
-  model: 'deepseek-v4-flash'
+  model: 'deepseek-flash'
 }
 
 const SYSTEM_PROMPT = '你是一个专业、准确、简洁的 AI 助手。'
@@ -36,6 +36,16 @@ const showSettings = ref(false)
 let nextId = 1
 const isLoading = ref(false)
 
+let abortController: AbortController | null = null
+
+function handleStop() {
+  abortController?.abort()
+}
+
+onBeforeUnmount(() => {
+  abortController?.abort()
+})
+
 function loadModels(): string[] {
   try {
     const raw = localStorage.getItem('ai-chat-models')
@@ -45,7 +55,7 @@ function loadModels(): string[] {
   }
 }
 
-const MODEL_PRESETS = ['deepseek-v4-flash', 'deepseek-v4-pro']
+const MODEL_PRESETS = ['deepseek-flash', 'deepseek-v4-pro']
 const models = ref<string[]>(loadModels())
 
 const modelOptions = computed(() =>
@@ -106,6 +116,7 @@ async function handleSend(message: string) {
   })
 
   isLoading.value = true
+  abortController = new AbortController()
 
   try {
     const history: ChatMessage[] = [
@@ -132,17 +143,23 @@ async function handleSend(message: string) {
           target.system = true
         }
       }
-    })
+    }, abortController.signal)
   } catch (error) {
     const target = messages.value.find((m) => m.id === assistantId)
-    const detail = error instanceof Error ? error.message : '未知错误'
-    if (target) {
-      target.content = `请求失败：${detail}`
-      target.error = true
-      target.system = true
+
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      if (target && !target.content) target.content = '（已停止）'
+    } else {
+      const detail = error instanceof Error ? error.message : '未知错误'
+      if (target) {
+        target.content = `请求失败：${detail}`
+        target.error = true
+        target.system = true
+      }
     }
   } finally {
     isLoading.value = false
+    abortController = null
   }
 }
 </script>
@@ -172,6 +189,14 @@ async function handleSend(message: string) {
             {{ settings.model }}
           </option>
         </select>
+
+        <button
+          v-if="isLoading"
+          class="stop-btn"
+          @click="handleStop"
+        >
+          停止
+        </button>
 
         <button
           class="settings-btn"
@@ -233,6 +258,15 @@ async function handleSend(message: string) {
   border: 1px solid #ddd;
   border-radius: 6px;
   background: white;
+  cursor: pointer;
+}
+
+.stop-btn {
+  padding: 6px 14px;
+  border: 1px solid #ffa39e;
+  border-radius: 6px;
+  background: #fff1f0;
+  color: #cf1322;
   cursor: pointer;
 }
 </style>

@@ -31,7 +31,8 @@ export async function fetchModels(settings: ChatSettings): Promise<string[]> {
 export async function streamChat(
   messages: ChatMessage[],
   settings: ChatSettings,
-  handlers: StreamHandlers = {}
+  handlers: StreamHandlers = {},
+  signal?: AbortSignal
 ): Promise<void> {
   const { onModel, onDelta, onError, onDone } = handlers
 
@@ -45,6 +46,7 @@ export async function streamChat(
       model: settings.model,
       stream: true,
     }),
+    signal,
   })
 
   if (!resp.ok) {
