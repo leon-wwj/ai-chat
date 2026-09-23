@@ -33,3 +33,7 @@ venv/
 .env
 .env.*
 !.env.example
+
+# Project rules & roadmap (local only, not uploaded)
+AGENTS.md
+ROADMAP.md
