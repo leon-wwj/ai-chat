@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
-import type { Message, ChatSettings as Settings, ChatMessage } from '@/types'
+import type { Message, ChatSettings as Settings, ChatMessage, ChatStatus } from '@/types'
 
 import ChatSidebar from '@/components/ChatSidebar.vue'
 import ChatWindow from '@/components/ChatWindow.vue'
@@ -34,7 +34,11 @@ const settings = reactive<Settings>(loadSettings())
 const showSettings = ref(false)
 
 let nextId = 1
-const isLoading = ref(false)
+const status = ref<ChatStatus>('idle')
+
+const isActive = computed(
+  () => status.value === 'sending' || status.value === 'streaming'
+)
 
 let abortController: AbortController | null = null
 
@@ -115,7 +119,7 @@ async function handleSend(message: string) {
     model: settings.model
   })
 
-  isLoading.value = true
+  status.value = 'sending'
   abortController = new AbortController()
 
   try {
@@ -132,10 +136,15 @@ async function handleSend(message: string) {
         if (target) target.model = model
       },
       onDelta: (delta: string) => {
+        status.value = 'streaming'
         const target = messages.value.find((m) => m.id === assistantId)
         if (target) target.content += delta
       },
+      onDone: () => {
+        status.value = 'done'
+      },
       onError: (err: string) => {
+        status.value = 'error'
         const target = messages.value.find((m) => m.id === assistantId)
         if (target) {
           target.content = err
@@ -148,8 +157,10 @@ async function handleSend(message: string) {
     const target = messages.value.find((m) => m.id === assistantId)
 
     if (error instanceof DOMException && error.name === 'AbortError') {
+      status.value = 'aborted'
       if (target && !target.content) target.content = '（已停止）'
     } else {
+      status.value = 'error'
       const detail = error instanceof Error ? error.message : '未知错误'
       if (target) {
         target.content = `请求失败：${detail}`
@@ -158,7 +169,6 @@ async function handleSend(message: string) {
       }
     }
   } finally {
-    isLoading.value = false
     abortController = null
   }
 }
@@ -191,7 +201,7 @@ async function handleSend(message: string) {
         </select>
 
         <button
-          v-if="isLoading"
+          v-if="isActive"
           class="stop-btn"
           @click="handleStop"
         >
@@ -208,7 +218,7 @@ async function handleSend(message: string) {
 
       <ChatWindow
         :messages="messages"
-        :is-loading="isLoading"
+        :status="status"
       />
 
       <ChatInput @send="handleSend" />

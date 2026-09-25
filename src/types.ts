@@ -21,3 +21,11 @@ export interface ChatResponse {
   content: string
   model?: string
 }
+
+export type ChatStatus =
+  | 'idle'
+  | 'sending'
+  | 'streaming'
+  | 'done'
+  | 'error'
+  | 'aborted'

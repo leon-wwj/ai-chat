@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import { ref, nextTick, watch } from 'vue'
-import type { Message } from '@/types'
+import { computed, nextTick, ref, watch } from 'vue'
+import type { ChatStatus, Message } from '@/types'
 import ChatMessage from '@/components/ChatMessage.vue'
 
 const props = defineProps<{
   messages: Message[]
-  isLoading?: boolean
+  status?: ChatStatus
 }>()
+
+const statusText = computed(() => {
+  if (props.status === 'sending') return '正在请求…'
+  if (props.status === 'streaming') return '正在生成…'
+  return ''
+})
 
 const messagesContainer = ref<HTMLElement | null>(null)
 
@@ -41,10 +47,10 @@ watch(
       :message="message"
     />
     <div
-      v-if="isLoading"
+      v-if="statusText"
       class="loading"
-    > 
-      AI 正在思考...
+    >
+      {{ statusText }}
     </div>
   </main>
 </template>
