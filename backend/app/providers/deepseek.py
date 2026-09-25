@@ -77,6 +77,9 @@ async def stream_llm(rid: str, url: str, headers: dict, payload: dict):
     model_sent = False
     content_started = False
     started = time.perf_counter()
+    first_token_at: float | None = None
+    chars = 0
+    retry_wait = 0.0
 
     logger.info("req=%s stream start", rid)
 
@@ -91,7 +94,9 @@ async def stream_llm(rid: str, url: str, headers: dict, payload: dict):
                                 "req=%s stream upstream status=%d attempt=%d/%d, will retry",
                                 rid, resp.status_code, attempt, RETRY_MAX_ATTEMPTS,
                             )
-                            await asyncio.sleep(backoff_seconds(attempt))
+                            delay = backoff_seconds(attempt)
+                            retry_wait += delay
+                            await asyncio.sleep(delay)
                             continue
                         logger.error(
                             "req=%s stream upstream status=%d elapsed=%.0fms body=%s",
@@ -117,14 +122,23 @@ async def stream_llm(rid: str, url: str, headers: dict, payload: dict):
                                 yield f"__MODEL__:{real_model}\n"
                             content = obj["choices"][0]["delta"].get("content")
                             if content:
+                                if first_token_at is None:
+                                    first_token_at = time.perf_counter()
+                                    logger.info(
+                                        "req=%s stream first token ttft=%.0fms",
+                                        rid, (first_token_at - started) * 1000,
+                                    )
                                 content_started = True
+                                chars += len(content)
                                 yield content
                         except (json.JSONDecodeError, KeyError, IndexError):
                             continue
 
+                    ttft = "none" if first_token_at is None else f"{(first_token_at - started) * 1000:.0f}ms"
                     logger.info(
-                        "req=%s stream done elapsed=%.0fms",
-                        rid, (time.perf_counter() - started) * 1000,
+                        "req=%s stream done ttft=%s elapsed=%.0fms backoff=%.0fms chars=%d",
+                        rid, ttft, (time.perf_counter() - started) * 1000,
+                        retry_wait * 1000, chars,
                     )
                     return
         except httpx.HTTPError as exc:
@@ -133,7 +147,9 @@ async def stream_llm(rid: str, url: str, headers: dict, payload: dict):
                     "req=%s stream connect error attempt=%d/%d error=%s, will retry",
                     rid, attempt, RETRY_MAX_ATTEMPTS, exc,
                 )
-                await asyncio.sleep(backoff_seconds(attempt))
+                delay = backoff_seconds(attempt)
+                retry_wait += delay
+                await asyncio.sleep(delay)
                 continue
             logger.error(
                 "req=%s stream failed attempt=%d elapsed=%.0fms error=%s",
@@ -141,3 +157,11 @@ async def stream_llm(rid: str, url: str, headers: dict, payload: dict):
             )
             yield f"__ERROR__:连接 LLM 服务失败: {exc}"
             return
+        except (asyncio.CancelledError, GeneratorExit):
+            # Client hit "stop" (or disconnected): the generator is closed mid-flight.
+            # Without this line the request just vanishes from the logs.
+            logger.info(
+                "req=%s stream aborted elapsed=%.0fms chars=%d",
+                rid, (time.perf_counter() - started) * 1000, chars,
+            )
+            raise
