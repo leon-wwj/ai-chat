@@ -8,6 +8,29 @@ from app.config import RETRY_BACKOFF_SECONDS, RETRY_MAX_ATTEMPTS, RETRYABLE_STAT
 from app.logging_setup import logger
 
 
+def chat_completions_url(base_url: str) -> str:
+    return f"{base_url.rstrip('/')}/chat/completions"
+
+
+def models_url(base_url: str) -> str:
+    return f"{base_url.rstrip('/')}/models"
+
+
+def auth_headers(api_key: str) -> dict:
+    return {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+
+def build_chat_payload(model: str, messages: list[dict], stream: bool) -> dict:
+    return {
+        "model": model,
+        "messages": messages,
+        "stream": stream,
+    }
+
+
 def backoff_seconds(attempt: int) -> float:
     """Exponential backoff: 0.5s, 1s, 2s ..."""
     return RETRY_BACKOFF_SECONDS * (2 ** (attempt - 1))
