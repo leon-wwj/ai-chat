@@ -4,8 +4,23 @@ import time
 
 import httpx
 
-from app.config import RETRY_BACKOFF_SECONDS, RETRY_MAX_ATTEMPTS, RETRYABLE_STATUS
+from app.config import (
+    RETRY_BACKOFF_SECONDS,
+    RETRY_MAX_ATTEMPTS,
+    RETRYABLE_STATUS,
+    STREAM_IDLE_TIMEOUT_SECONDS,
+    STREAM_TOTAL_BUDGET_SECONDS,
+)
 from app.logging_setup import logger
+
+# `read` is "max wait between two chunks", not "max total time", so long answers
+# still stream fine as long as the upstream keeps sending.
+STREAM_TIMEOUT = httpx.Timeout(
+    connect=10.0,
+    read=STREAM_IDLE_TIMEOUT_SECONDS,
+    write=10.0,
+    pool=10.0,
+)
 
 
 def chat_completions_url(base_url: str) -> str:
@@ -91,11 +106,19 @@ async def request_with_retry(
     return None, last_error
 
 
-async def stream_llm(rid: str, url: str, headers: dict, payload: dict):
+async def stream_llm(
+    rid: str,
+    url: str,
+    headers: dict,
+    payload: dict,
+    transport: httpx.AsyncBaseTransport | None = None,
+):
     """Stream an OpenAI-compatible SSE response.
 
     Only the connection is retried, and only while nothing has been sent to the
     client yet - retrying after partial content would duplicate the answer.
+
+    `transport` is a seam for tests (httpx.MockTransport); production passes None.
     """
     model_sent = False
     content_started = False
@@ -108,7 +131,7 @@ async def stream_llm(rid: str, url: str, headers: dict, payload: dict):
 
     for attempt in range(1, RETRY_MAX_ATTEMPTS + 1):
         try:
-            async with httpx.AsyncClient(timeout=None) as client:
+            async with httpx.AsyncClient(timeout=STREAM_TIMEOUT, transport=transport) as client:
                 async with client.stream("POST", url, json=payload, headers=headers) as resp:
                     if resp.status_code != 200:
                         body = (await resp.aread()).decode("utf-8", errors="replace")
@@ -132,6 +155,14 @@ async def stream_llm(rid: str, url: str, headers: dict, payload: dict):
                     logger.info("req=%s stream connected attempt=%d", rid, attempt)
 
                     async for line in resp.aiter_lines():
+                        if time.perf_counter() - started > STREAM_TOTAL_BUDGET_SECONDS:
+                            logger.error(
+                                "req=%s stream budget exceeded elapsed=%.0fms chars=%d",
+                                rid, (time.perf_counter() - started) * 1000, chars,
+                            )
+                            yield "__ERROR__:生成超时（超过流式总时长预算）"
+                            return
+
                         if not line.startswith("data:"):
                             continue
                         data = line[5:].strip()
