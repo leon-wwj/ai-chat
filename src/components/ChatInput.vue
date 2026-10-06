@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
+const props = defineProps<{ disabled?: boolean }>()
+
 const message = ref('')
 const emit = defineEmits<{ send: [message: string] }>()
 
 function handleSend() {
+  if (props.disabled) return
   if (!message.value.trim()) return
 
   emit('send', message.value)
@@ -25,11 +28,15 @@ function handleKeydown(event: KeyboardEvent) {
     <textarea
       v-model="message"
       placeholder="输入消息..."
+      :disabled="disabled"
       @keydown="handleKeydown"
     />
 
-    <button @click="handleSend">
-      发送
+    <button
+      :disabled="disabled"
+      @click="handleSend"
+    >
+      {{ disabled ? '生成中…' : '发送' }}
     </button>
   </div>
 </template>
@@ -56,5 +63,12 @@ function handleKeydown(event: KeyboardEvent) {
   border: none;
   border-radius: 8px;
   cursor: pointer;
+}
+
+.chat-input textarea:disabled,
+.chat-input button:disabled {
+  background: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
 }
 </style>

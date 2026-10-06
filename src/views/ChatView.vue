@@ -95,6 +95,8 @@ function handleModelChange() {
 }
 
 async function handleSend(message: string) {
+  if (isActive.value) return
+
   if (!settings.apiKey) {
     messages.value.push({
       id: nextId++,
@@ -221,7 +223,10 @@ async function handleSend(message: string) {
         :status="status"
       />
 
-      <ChatInput @send="handleSend" />
+      <ChatInput
+        :disabled="isActive"
+        @send="handleSend"
+      />
     </div>
 
     <ChatSettings
