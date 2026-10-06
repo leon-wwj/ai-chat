@@ -74,8 +74,10 @@ async function refreshModels() {
       models.value = list
       localStorage.setItem('ai-chat-models', JSON.stringify(list))
     }
-  } catch {
-    // 拉取失败时保留现有列表（回退到预设）
+  } catch (error) {
+    // 拉取失败不阻断聊天：保留现有列表（回退到模型预设）即可。
+    // 但要留痕，否则"模型列表为什么不是最新的"这类问题无从排查。
+    console.warn('[ai-chat] 拉取模型列表失败，沿用本地列表', error)
   }
 }
 
