@@ -1,3 +1,13 @@
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# 读取 backend/.env（该文件不进 git）
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+
 DEFAULT_BASE_URL = "https://api.deepseek.com"
 DEFAULT_MODEL = "deepseek-flash"
 TIMEOUT_SECONDS = 60
