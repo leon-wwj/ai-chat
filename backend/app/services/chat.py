@@ -29,7 +29,9 @@ class ChatCompletion:
 
 
 async def complete_chat(
-    rid: str, req: ChatRequest
+    rid: str,
+    req: ChatRequest,
+    transport: httpx.AsyncBaseTransport | None = None,
 ) -> tuple[ChatCompletion | None, str | None]:
     url = chat_completions_url(req.base_url)
     headers = auth_headers(req.api_key)
@@ -38,7 +40,7 @@ async def complete_chat(
     )
 
     started = time.perf_counter()
-    async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
+    async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS, transport=transport) as client:
         resp, error = await request_with_retry(rid, client, "POST", url, headers, payload)
     elapsed_ms = (time.perf_counter() - started) * 1000
 
@@ -87,13 +89,15 @@ async def stream_chat(rid: str, req: ChatRequest):
 
 
 async def list_models(
-    rid: str, req: ModelsRequest
+    rid: str,
+    req: ModelsRequest,
+    transport: httpx.AsyncBaseTransport | None = None,
 ) -> tuple[list[str] | None, str | None]:
     url = models_url(req.base_url)
     headers = {"Authorization": f"Bearer {req.api_key}"}
 
     started = time.perf_counter()
-    async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
+    async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS, transport=transport) as client:
         resp, error = await request_with_retry(rid, client, "GET", url, headers)
     elapsed_ms = (time.perf_counter() - started) * 1000
 
