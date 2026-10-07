@@ -73,6 +73,7 @@ async def add_message(
     role: str,
     content: str,
     model: str | None = None,
+    status: str = "complete",
 ) -> Message:
     """追加一条消息，并把所属会话的 updated_at 顶到最新。
 
@@ -84,6 +85,7 @@ async def add_message(
         role=role,
         content=content,
         model=model,
+        status=status,
     )
     session.add(message)
     await session.execute(

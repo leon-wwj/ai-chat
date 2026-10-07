@@ -16,6 +16,8 @@ class ChatRequest(BaseModel):
     base_url: str = DEFAULT_BASE_URL
     model: str = DEFAULT_MODEL
     stream: bool = False
+    # 带会话 id 时，本轮问答会落库（不带则纯代理，不存）
+    conversation_id: int | None = None
 
 
 class ModelsRequest(BaseModel):
@@ -50,4 +52,5 @@ class MessageOut(BaseModel):
     role: str
     content: str
     model: str | None = None
+    status: str
     created_at: datetime

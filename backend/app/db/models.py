@@ -57,6 +57,10 @@ class Message(Base):
     role: Mapped[str] = mapped_column(String(20))
     content: Mapped[str] = mapped_column(MEDIUMTEXT)
     model: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    # complete / interrupted / error —— 被中断的回复也留存，能看出当时发生了什么
+    status: Mapped[str] = mapped_column(
+        String(20), default="complete", server_default="complete"
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     conversation: Mapped["Conversation"] = relationship(back_populates="messages")

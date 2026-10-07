@@ -4,12 +4,14 @@
 成功返回业务结果，失败返回 (None, 错误描述)。
 """
 
+import asyncio
 import time
 from dataclasses import dataclass
 
 import httpx
 
 from app.config import TIMEOUT_SECONDS
+from app.db.database import SessionLocal
 from app.logging_setup import logger
 from app.providers.deepseek import (
     auth_headers,
@@ -20,6 +22,7 @@ from app.providers.deepseek import (
     stream_llm,
 )
 from app.schemas import ChatRequest, ModelsRequest
+from app.services import conversation
 
 
 @dataclass
@@ -77,15 +80,73 @@ async def complete_chat(
     return ChatCompletion(content=content, model=model), None
 
 
+async def _persist(
+    rid: str,
+    conversation_id: int,
+    role: str,
+    content: str,
+    model: str | None,
+    status: str,
+) -> None:
+    """落库是副作用，失败只记日志——不能因为存不下就把已经发出的内容毁掉。"""
+    try:
+        async with SessionLocal() as session:
+            await conversation.add_message(
+                session, conversation_id, role, content, model, status
+            )
+    except Exception as exc:
+        logger.error("req=%s persist failed role=%s error=%r", rid, role, exc)
+
+
 async def stream_chat(rid: str, req: ChatRequest):
+    """流式转发，并按 req.conversation_id 落库。
+
+    客户端点"停止"时后端不一定立刻知道（要等写入失败或连接被检测到断开），
+    所以助手回复的落库放在生成器收尾处：正常结束 = complete，
+    被取消/关闭 = interrupted（保留已经生成的部分），上游报错 = error。
+    """
     url = chat_completions_url(req.base_url)
     headers = auth_headers(req.api_key)
     payload = build_chat_payload(
         req.model, [m.model_dump() for m in req.messages], stream=True
     )
 
-    async for chunk in stream_llm(rid, url, headers, payload):
-        yield chunk
+    collected: list[str] = []
+    real_model: str | None = None
+    status = "complete"
+
+    if req.conversation_id:
+        # 本轮新增的用户输入 = 最后一条 user 消息
+        last_user = next(
+            (m for m in reversed(req.messages) if m.role == "user"), None
+        )
+        if last_user:
+            await _persist(
+                rid, req.conversation_id, "user", last_user.content, None, "complete"
+            )
+
+    try:
+        async for chunk in stream_llm(rid, url, headers, payload):
+            if chunk.startswith("__MODEL__:"):
+                real_model = chunk[len("__MODEL__:"):].strip()
+            elif chunk.startswith("__ERROR__:"):
+                status = "error"
+            else:
+                collected.append(chunk)
+            yield chunk
+    except (asyncio.CancelledError, GeneratorExit):
+        status = "interrupted"
+        raise
+    finally:
+        if req.conversation_id and collected:
+            await _persist(
+                rid,
+                req.conversation_id,
+                "assistant",
+                "".join(collected),
+                real_model,
+                status,
+            )
 
 
 async def list_models(
